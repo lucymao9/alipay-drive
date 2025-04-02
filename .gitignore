@@ -1,0 +1,11 @@
+.idea
+*.DS_Store
+/vendor
+composer.lock
+.subsplit
+.php_cs.cache
+test.php
+/test
+test/test.php
+/tests
+/src/test/

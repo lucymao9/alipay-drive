@@ -1,0 +1,27 @@
+{
+    "name": "lucymao9/alipay-drive",
+    "description": "支付宝代驾SDK",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "lucymao9",
+            "email": "495505956@qq.com"
+        }
+    ],
+    "require": {
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-openssl":"*",
+        "ext-bcmath": "*",
+        "ext-dom": "*",
+        "guzzlehttp/guzzle": "^7.3",
+        "guzzlehttp/psr7": "^1.7 || ^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Lucymao9\\AlipayDrive\\": "src/"
+        }
+    }
+}
