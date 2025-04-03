@@ -510,11 +510,12 @@ class AopClient
 
 
         //组装系统参数
-        $sysParams["app_id"] = $this->appId;
+        $sysParams["isv_app_id"] = $this->appId;
         $sysParams["version"] = $iv;
         $sysParams["format"] = $this->format;
+        $sysParams["utc_timestamp"] = time();
         $sysParams["sign_type"] = $this->signType;
-        $sysParams["method"] = $request->getApiMethodName();
+        $sysParams["service"] = $request->getApiMethodName();
         $sysParams["timestamp"] = date("Y-m-d H:i:s");
         if (!$this->checkEmpty($authToken)) {
             $sysParams["auth_token"] = $authToken;
@@ -587,9 +588,11 @@ class AopClient
         $requestUrl = substr($requestUrl, 0, -1);
 
 echo $requestUrl;
+print_r($apiParams);
         //发起HTTP请求
         try {
             $resp = $this->curl($requestUrl, $apiParams);
+            print_r($resp);
         } catch (Exception $e) {
             $this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_ERROR_" . $e->getCode(), $e->getMessage());
             return false;
@@ -1327,6 +1330,25 @@ echo $requestUrl;
             echo "<br/>" . $content;
         }
 
+    }
+
+    public function parseResponse($request,$resp){
+        $signData = null;
+        $respObject = json_decode($resp);
+        if (null !== $respObject) {
+            $signData = $this->parserJSONSignData($request, $resp, $respObject);
+        }
+        $this->checkResponseSign($request, $signData, $resp, $respObject);
+        if (method_exists($request, "getNeedEncrypt") && $request->getNeedEncrypt()) {
+
+            $resp = $this->encryptJSONSignSource($request, $resp);
+
+            // 将返回结果转换本地文件编码
+            $r = iconv($this->postCharset, $this->fileCharset . "//IGNORE", $resp);
+            $respObject = json_decode($r);
+
+        }
+        return $respObject;
     }
 
 

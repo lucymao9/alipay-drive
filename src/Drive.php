@@ -6,13 +6,17 @@ use Lucymao9\AlipayDrive\aop\AlipayConfig;
 use Lucymao9\AlipayDrive\aop\AopClient;
 use Lucymao9\AlipayDrive\request\CancelFeeQueryRequest;
 use Lucymao9\AlipayDrive\request\CancelRequest;
+use Lucymao9\AlipayDrive\request\ChangePriceNotifyRequest;
 use Lucymao9\AlipayDrive\request\CommitRequest;
 use Lucymao9\AlipayDrive\request\EstimatePricesRequest;
 use Lucymao9\AlipayDrive\request\FeeDetailQueryRequest;
+use Lucymao9\AlipayDrive\request\ModifyDestinationRequest;
 use Lucymao9\AlipayDrive\request\NearbyDriversRequest;
+use Lucymao9\AlipayDrive\request\NotifyRequest;
+use Lucymao9\AlipayDrive\request\PayedNotifyRequest;
 use Lucymao9\AlipayDrive\request\PlanetRequest;
 use Lucymao9\AlipayDrive\request\QueryRequest;
-use Lucymao9\AlipayDrive\request\TrackQueryRequest;
+use Lucymao9\AlipayDrive\request\TraceQueryRequest;
 
 class Drive
 {
@@ -41,6 +45,7 @@ class Drive
         $alipayConfig->setAlipayPublicKey($alipayPublicKey);
         $alipayConfig->setCharset($charset);
         $alipayConfig->setSignType($sign_type);
+//        $alipayConfig->setSkipSign(false);
         $this->alipayClient = new AopClient($alipayConfig);
         $this->alipayClient->encryptKey = $sign;
         $this->alipayClient->encryptType = "AES";
@@ -237,9 +242,9 @@ class Drive
      * @param $params
      * @return array
      */
-    public function trackQuery($params)
+    public function traceQuery($params)
     {
-        $request = new TrackQueryRequest();
+        $request = new TraceQueryRequest();
         //报文内容为json格式
         $request->setBizContent(json_encode([
             'orderNo' => $params['orderNo'] ?? '',
@@ -321,6 +326,101 @@ class Drive
         $request->setNeedEncrypt(true);
         $response = $this->getResponse($request);
         return $response;
+    }
+
+
+    /**
+     * 订单正向状态同步SPI
+     * orderNo	String	代驾SaaS订单号	必填	代驾SaaS系统下单成功的订单号，后续所有的订单功能都传此订单号
+     * customOrderNo	String	客户订单号	必填	客户订单号，仅透传回去
+     * orderStatus	String	订单状态	必填	订单状态，详情见文档【订单状态机】、【订单状态枚举表】
+     * driverAcceptTime	String	司机接单时间	非必填	司机接单时间，司机接单后的状态必传；该状态表示商户侧的业务时间
+     * orderChangeTime	String	订单状态改变时间	必填	订单状态改变时间；代驾商家传
+     * totalAmount	String	订单应付金额	非必填	订单应付金额，服务完成后进入到待支付状态，或取消产生取消费进入到取消待支付状态时必传，单位：元
+     * waitFreeMinute	String	免费等候时长	非必填	免费等候时长，司机已就位时必传；单位：分钟。如果服务商没有产生取消费的场景，即在进入到开始服务（开车）之前都可以免责取消，此字段可以传0，请在对接前和解决方案以及技术同学做确认
+     * vehicleNumberValidate	String	车牌号/车架号校验是否通过	非必填	车牌号/车架号校验是否通过，二级客户配置了需要进行车牌号校验，则该字段必传。若字段为空则，理论上不进行校验。若二级客户维度配置需要进行车牌号校验，但是下游未传该结果字段，支付宝侧进行报错。
+        枚举字典值：
+        "SUCCESS"-校验通过；
+        "FAILED"-校验失败；
+     * driverCarPhotoList	List<String>	司机就位时拍摄的代驾车辆照片信息	非必填	二级客户维度配置代驾车辆预校验，并且订单同步状态为司机已就位，该字段必传。
+        司机就位时拍摄的代驾车辆照片信息，照片至少需要清晰包含车牌号等关键信息；
+        具体拍摄照片要求，例如具体张数、拍摄角度，由上游权益客户与代驾商户确定；
+     * driverCarPlateNumber	String	需代驾车辆车牌号	非必填	下游不一定有该字段
+     * @param $params
+     * @return mixed
+     */
+    public function notify($params){
+        $request = new NotifyRequest();
+        return  $this->alipayClient->parseResponse($request,$params);
+    }
+
+    /**
+     * 代驾商家订单取消SPI
+     * orderNo	String	代驾SaaS订单号	必填	代驾SaaS系统下单成功的订单号，后续所有的订单功能都传此订单号
+     * customOrderNo	String	客户订单号	必填	客户订单号，仅透传回去
+     * orderChangeTime	String	订单状态改变时间	必填	订单状态改变时间
+     * cancelReason	String	取消订单原因	非必填	代驾司机主动取消订单原因，有则传
+     * @param $params
+     * @return mixed
+     */
+    public function cancelNotify($params){
+        $request = new CancelRequest();
+        return  $this->alipayClient->parseResponse($request,$params);
+    }
+
+    /**
+     * 代驾商家改价通知SPI
+     * orderNo	String	代驾SaaS订单号	必填	代驾SaaS系统下单成功的订单号，后续所有的订单功能都传此订单号
+     * customOrderNo	String	客户订单号	必填	客户订单号，仅透传回去
+     * phone	String	乘车人手机号	必填	乘车人手机号，必填非空
+     * totalAmount	String	改价之后的金额	必填	改价之后的金额，必填非空；单位：元；精度：两位小数；例：8.08
+     * @param $params
+     * @return void
+     */
+    public function changePriceNotify($params){
+        $request = new ChangePriceNotifyRequest();
+        return  $this->alipayClient->parseResponse($request,$params);
+    }
+
+    /**
+     * 代驾商家收款成功SPI
+     * orderNo	String	代驾SaaS订单号	必填	代驾SaaS系统下单成功的订单号，后续所有的订单功能都传此订单号
+     * customOrderNo	String	客户订单号	必填	客户订单号，仅透传回去
+     * phone	String	用户手机号	必填	乘车人手机号，必填非空
+     * totalAmount	String	订单总金额	必填	单位：元；
+        精度：两位小数；
+        例：8.08；
+        订单总费用，是代驾商户测与乘客协调一致的代驾总费用。支付宝侧以该金额作为订单总金额。
+     * payAmount	String	支付金额	必填	单位：元；
+        精度：两位小数；
+        例：8.08；
+        一、对于代驾商户侧进行线下支付模式，用户待支付金额等与订单总金额：payAmount=totalAmount；例如司机出示收款码用户扫码支付的线下支付方式，支付宝不考虑代驾商户是否使用了权益或优惠信息，仅仅同步用户线下支付的金额。
+        例如：
+        1.代驾商户支持新用户首单减免10元的新客券，代驾总费用是100元，新用户下单后使用券码只需要线下支付90元，那么同步的订单总金额和用户待支付金额就是90元；
+        2.代驾商户支持10公里免费权益，某权益用户一笔订单行驶了13公里，超过权益券的3公里费用是12.88元，用户线下支付该金额后，代驾SaaS同步给客户的订单总金额和用户待支付金额都是12.88元；
+        二、对于客户的线上支付模式，应该由客户调用代驾SaaS实现的支付成功通知API，由客户通知代驾SaaS支付成功；线上支付本期暂且不做，未提供API；
+     * @param $params
+     * @return mixed
+     */
+    public function payedNotify($params){
+        $request = new PayedNotifyRequest();
+        return  $this->alipayClient->parseResponse($request,$params);
+    }
+
+    /**
+     * 代驾商家修改终点SPI
+     * orderNo	String	代驾SaaS订单号	必填	代驾SaaS系统下单成功的订单号，后续所有的订单功能都传此订单号
+     * customOrderNo	String	客户订单号	必填	客户订单号，仅透传回去
+     * phone	String	乘车人手机号	必填	乘车人手机号，必填非空
+     * address	String	修改后代驾目的地详细地址	必填	修改后代驾目的地详细地址
+     * longitude	String	修改后代驾目的地经度	必填	修改后代驾目的地经度
+     * latitude	String	修改后代驾目的地纬度	必填	修改后代驾目的地纬度
+     * @param $params
+     * @return mixed
+     */
+    public function modifyDestination($params){
+        $request = new ModifyDestinationRequest();
+        return  $this->alipayClient->parseResponse($request,$params);
     }
 
 }
