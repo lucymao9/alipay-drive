@@ -1357,5 +1357,10 @@ class AopClient
         return $respObject;
     }
 
+    public function getSign($content)
+    {
+        return $this->generateSign($content, $this->signType);
+    }
+
 
 }
