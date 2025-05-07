@@ -1339,27 +1339,36 @@ class AopClient
     }
 
     public function parseResponse($request,$resp){
-        $signData = null;
-        $respObject = json_decode($resp);
-        if (null !== $respObject) {
-            $signData = $this->parserJSONSignData($request, $resp, $respObject);
+        if (array_key_exists('sign', $resp)) {
+            $sign = $resp['sign'];
+            //使用正则表达式去除字符串首尾空格
+            $sign = trim($sign);
+            //避免多次urlencode导致把签名中的+变成了空格，所以把签名中的空格替换回+
+            //如果签名中没有空格，则不需要这段逻辑
+            $sign = preg_replace('# #', '+', $resp['sign']);
+
+            $resp['sign'] = $sign;
+        } else {
+            throw new \Exception("签名不存在");
         }
-        $this->checkResponseSign($request, $signData, $resp, $respObject);
-        if (method_exists($request, "getNeedEncrypt") && $request->getNeedEncrypt()) {
-
-            $resp = $this->encryptJSONSignSource($request, $resp);
-
-            // 将返回结果转换本地文件编码
-            $r = iconv($this->postCharset, $this->fileCharset . "//IGNORE", $resp);
-            $respObject = json_decode($r);
-
+        $signType = $resp['sign_type'];
+        $flag = $this->rsaCheckV1($resp,null, $signType);
+        if(!$flag){
+            throw new \Exception("签名验证失败");
         }
-        return $respObject;
+        return $resp;
     }
 
     public function getSign($content)
     {
-        return $this->generateSign($content, $this->signType);
+        ksort($content);//数组排序
+        $contentToSign = json_encode($content,JSON_UNESCAPED_UNICODE);
+        $sign = $this->sign($contentToSign);//加签
+        $result = [
+            "sign" => $sign,
+            "response" => $contentToSign
+        ];
+        return $result;
     }
 
 
