@@ -68,6 +68,7 @@ class AopClient
     private $targetServiceUrl = "";
 
     protected $alipaySdkVersion = "alipay-sdk-PHP-4.20.410.ALL";
+    protected $isLog = false;
     function __construct() {
         //根据参数个数和参数类型 来做相应的判断
         if(func_num_args()==1 && func_get_arg(0) instanceof AlipayConfig){
@@ -79,6 +80,7 @@ class AopClient
             $this->postCharset = $config->getCharset();
             $this->rsaPrivateKey = $config->getPrivateKey();
             $this->alipayrsaPublicKey = $config->getAlipayPublicKey();
+            $this->isLog = $config->getIsLog();
             $this->skipSign = $config->isSkipSign();
         }
     }
@@ -289,7 +291,7 @@ class AopClient
             str_replace("\n", "", $responseTxt)
         );
 
-        echo json_encode($logData);
+//        echo json_encode($logData);
     }
 
     /**
@@ -419,7 +421,6 @@ class AopClient
 
         }
 
-        //print_r($apiParams);
         $totalParams = array_merge($apiParams, $sysParams);
 
         //待签名字符串
@@ -511,6 +512,7 @@ class AopClient
 
         //组装系统参数
         $sysParams["isv_app_id"] = $this->appId;
+        $sysParams["app_id"] = $this->appId;
         $sysParams["version"] = $iv;
         $sysParams["format"] = $this->format;
         $sysParams["utc_timestamp"] = time();
@@ -586,17 +588,22 @@ class AopClient
             }
         }
         $requestUrl = substr($requestUrl, 0, -1);
+//        $apiParams = array_merge($apiParams, $sysParams);
 
-echo $requestUrl;
-print_r($apiParams);
         //发起HTTP请求
-        try {
+//        try {
             $resp = $this->curl($requestUrl, $apiParams);
-            print_r($resp);
-        } catch (Exception $e) {
-            $this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_ERROR_" . $e->getCode(), $e->getMessage());
-            return false;
-        }
+            if($this->isLog){
+                $logDir = __DIR__.'/../../log';
+                if(!is_dir($logDir)){
+                    mkdir($logDir,0777,true);
+                }
+                file_put_contents($logDir.'/response.log','['.date('Y-m-d H:i:s').']'.json_encode(['requestUrl'=>$requestUrl,'request'=>$apiParams,'response'=>$resp],256).PHP_EOL,FILE_APPEND);
+            }
+//        } catch (Exception $e) {
+//            $this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_ERROR_" . $e->getCode(), $e->getMessage());
+//            return false;
+//        }
 
         //解析AOP返回结果
         $respWellFormed = false;
@@ -610,7 +617,6 @@ print_r($apiParams);
 
         if ("json" == strtolower($this->format)) {
             $respObject = json_decode($r);
-            print_r($r);
             if (null !== $respObject) {
                 $respWellFormed = true;
                 $signData = $this->parserJSONSignData($request, $resp, $respObject);
@@ -629,9 +635,9 @@ print_r($apiParams);
 
         //返回的HTTP文本不是标准JSON或者XML，记下错误日志
         if (false === $respWellFormed) {
-            var_dump(333);
-            $this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_RESPONSE_NOT_WELL_FORMED", $resp);
-            return false;
+            throw new \Exception("返回结果解码失败");
+//            $this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_RESPONSE_NOT_WELL_FORMED", $resp);
+//            return false;
         }
 
         // 验签

@@ -12,7 +12,7 @@ abstract class PlanetRequest
     private $apiVersion = "1.0";
     private $notifyUrl;
     private $returnUrl;
-    private $needEncrypt = true;
+    private $needEncrypt = false;
     private $bizContent;
 
     /**

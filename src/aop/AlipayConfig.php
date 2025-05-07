@@ -83,6 +83,11 @@ class AlipayConfig {
      */
     private $skipSign = false;
 
+    /**
+     * @var bool 是否记录日志
+     */
+    private $isLog = false;
+
 
     public function getServerUrl() {
         return $this->serverUrl;
@@ -193,5 +198,13 @@ class AlipayConfig {
     public function setSkipSign(bool $skipSign)
     {
         $this->skipSign = $skipSign;
+    }
+
+    public function getIsLog() {
+        return $this->isLog;
+    }
+
+    public function setIsLog($isLog) {
+        $this->isLog = $isLog;
     }
 }

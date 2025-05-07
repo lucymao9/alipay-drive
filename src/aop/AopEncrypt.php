@@ -22,7 +22,7 @@ function encrypt($str, $screct_key)
     //设置全0的IV
 
     $iv = str_repeat("\0", 16);
-    $encrypt_str = openssl_encrypt($str, 'aes-128-cbc', $screct_key, OPENSSL_NO_PADDING, $iv);
+    $encrypt_str = openssl_encrypt($str, 'aes-256-cbc', $screct_key, OPENSSL_NO_PADDING, $iv);
     return base64_encode($encrypt_str);
 }
 
@@ -39,7 +39,7 @@ function decrypt($str, $screct_key)
 
     //设置全0的IV
     $iv = str_repeat("\0", 16);
-    $decrypt_str = openssl_decrypt($str, 'aes-128-cbc', $screct_key, OPENSSL_NO_PADDING, $iv);
+    $decrypt_str = openssl_decrypt($str, 'aes-256-cbc', $screct_key, OPENSSL_NO_PADDING, $iv);
     $decrypt_str = stripPKSC7Padding($decrypt_str);
     return $decrypt_str;
 }
