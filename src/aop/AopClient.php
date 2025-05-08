@@ -1363,12 +1363,26 @@ class AopClient
     {
         ksort($content);//数组排序
         $contentToSign = json_encode($content,JSON_UNESCAPED_UNICODE);
-        $sign = $this->sign($contentToSign);//加签
-        $result = [
+        $sign = $this->RSA2($contentToSign,$this->rsaPrivateKey);//加签
+        return [
             "sign" => $sign,
             "response" => $contentToSign
         ];
-        return $result;
+    }
+
+    function RSA2($data, $pikey){
+        $res = "-----BEGIN RSA PRIVATE KEY-----\n" . wordwrap($pikey, 64, "\n", true) . "\n-----END RSA PRIVATE KEY-----";
+        // 请注意密钥 是不是有带   -----BEGIN RSA PRIVATE KEY-----   -----END RSA PRIVATE KEY-----
+
+        $piKey = openssl_pkey_get_private($res);
+
+        if ($piKey) {
+            $res = openssl_get_privatekey($res);
+            openssl_sign($data, $sign, $res, 'SHA256');
+            $sign = base64_encode($sign);
+            openssl_free_key($piKey);
+            return $sign;
+        }
     }
 
 
