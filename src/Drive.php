@@ -416,11 +416,7 @@ class Drive
 
     public function getResponseData($data)
     {
-        $sign = $this->alipayClient->getSign($data);
-        return [
-            'sign' => $sign,
-            'response' => $data
-        ];
+        return $this->alipayClient->getSign($data);
     }
 
 }
